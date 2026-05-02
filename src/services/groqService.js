@@ -96,7 +96,7 @@ function getDirectGameFallback({ question, answers, accountType, userQuestion })
     return `The answer is "${correctAnswer}." ${question.lesson}`;
   }
 
-  return `For this ${accountType} question, focus on "${correctAnswer}." ${question.lesson}`;
+  return `This question is about ${accountType} investing. Think about what each answer choice means in practice — consider the trade-offs between growth, stability, and flexibility before choosing.`;
 }
 
 export async function getGameQuestionHelp({ question, answers, accountType, userQuestion, chatHistory = [] }) {
@@ -121,22 +121,34 @@ export async function getGameQuestionHelp({ question, answers, accountType, user
       }))
     : [];
 
+  const systemParts = [
+    'You are a concise investing tutor inside a beginner finance quiz.',
+    `Account topic: ${accountType}`,
+    `Current quiz question: ${question.question}`,
+    `Answer choices:\n${answerChoices}`,
+  ];
+
+  if (asksForAnswer) {
+    // Only inject the answer and lesson when the player explicitly asks for them.
+    systemParts.push(`Correct answer: ${correctAnswer}`);
+    systemParts.push(`Lesson: ${question.lesson}`);
+    systemParts.push('Player explicitly wants the answer. Start with: The answer is "[correct answer]". Then explain why in 1-2 short plain sentences.');
+  } else if (isShortFollowUp) {
+    systemParts.push('Player asked a very short follow-up. Continue from prior context in 1-2 short sentences. Do NOT say which answer is correct.');
+  } else {
+    systemParts.push(
+      'Explain the investing concept this question is testing in plain English. ' +
+      'Describe what each type of answer choice generally means and what trade-offs it involves. ' +
+      'Do NOT say or imply which choice is correct. Do NOT use phrases like "focus on X", "think about X", or "the key here is X" that point to a specific option. ' +
+      'Let the player reason through it themselves. Keep it beginner-friendly and under 3 sentences.'
+    );
+  }
+
+  systemParts.push('Avoid generic finance definitions. Keep language simple and specific.');
+
   const systemMessage = {
     role: 'system',
-    content: [
-      'You are a concise investing tutor inside a beginner finance quiz.',
-      `Account topic: ${accountType}`,
-      `Current quiz question: ${question.question}`,
-      `Answer choices:\n${answerChoices}`,
-      `Correct answer: ${correctAnswer}`,
-      `Lesson: ${question.lesson}`,
-      asksForAnswer
-        ? 'Player wants the answer. Start with: The answer is "[correct answer]". Then explain why in 1-2 short plain sentences.'
-        : isShortFollowUp
-          ? 'Player asked a very short follow-up. Continue from prior context in 1-2 short sentences and avoid repeating the full prior explanation.'
-          : 'Give focused help for this exact question. Mention one clue and one tempting wrong option to eliminate.',
-      'Avoid generic finance definitions. Keep language simple and specific.'
-    ].join('\n')
+    content: systemParts.join('\n')
   };
 
   const messages = [systemMessage, ...chatTurns];

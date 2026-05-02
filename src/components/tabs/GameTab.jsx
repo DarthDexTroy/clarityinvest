@@ -754,10 +754,6 @@ export default function GameTab() {
                 </div>
               )}
                 
-                <div className="lesson-preview">
-                  <p><strong>💡 Investing Connection:</strong></p>
-                  <p>{currentQ.lesson}</p>
-                </div>
               </div>
 
               <div className="game-coach">
