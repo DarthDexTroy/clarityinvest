@@ -14,48 +14,6 @@ ClarityInvest is an AI-powered portfolio management platform designed for beginn
 - **🎮 Investment Game**: Learn investing fundamentals through a coffee shop business simulation
 - **✅ Review & Execute**: Transparent rebalancing with educational explanations
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js 18+ installed
-- A Groq API key (free tier available)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   cd clarityinvest
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Get your Groq API key**
-   - Visit [console.groq.com](https://console.groq.com/keys)
-   - Sign up for a free account
-   - Create a new API key
-
-4. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and add your Groq API key:
-   ```
-   VITE_GROQ_API_KEY=your_actual_api_key_here
-   ```
-
-5. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-
-6. **Open your browser**
-   Navigate to `http://localhost:5173`
-
 ## 🛠️ Tech Stack
 
 - **Frontend**: React 19 + Vite 8
@@ -94,15 +52,6 @@ Review saved rebalancing plans with:
 
 ### 6. Game Tab
 Play the business simulation game to learn investing concepts through practical decision-making.
-
-## 🏆 Hackathon Criteria
-
-This project addresses the judging criteria:
-
-- **Innovation (30%)**: Unique scenario-based planning + global risk map + gamification
-- **User Experience (30%)**: Beginner-friendly interface with conversational AI guidance
-- **Transparency (20%)**: Clear explanations for every recommendation and tool
-- **Technical Execution (20%)**: Clean architecture, Groq AI integration, responsive design
 
 ## 🔧 Development
 
@@ -154,15 +103,3 @@ The app uses Groq's API for three types of recommendations:
 1. **Portfolio Recommendations**: Analyzes allocation vs target and suggests moves
 2. **Scenario Insights**: Provides guidance for hypothetical market scenarios
 3. **Event Recommendations**: Suggests protection strategies for geopolitical risks
-
-All AI calls are rate-limited and include fallback text if the API is unavailable.
-
-## 📄 License
-
-Built with ❤️ for the Empowering the Everyday Investor Hackathon
-
-## 🙏 Acknowledgments
-
-- Groq for lightning-fast AI inference
-- The open-source React ecosystem
-- Hackathon organizers and judges
