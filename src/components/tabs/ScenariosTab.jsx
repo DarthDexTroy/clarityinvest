@@ -671,8 +671,9 @@ const generateScenarios = (account) => {
   return scenarios[accountType] || [];
 };
 
-export default function ScenariosTab({ account }) {
-  const { dispatch } = useApp();
+export default function ScenariosTab({ account: accountProp }) {
+  const { state, dispatch } = useApp();
+  const account = state.portfolioAccounts.find((item) => item.id === accountProp?.id) || accountProp;
   const [selectedScenario, setSelectedScenario] = useState(0);
   const [selectedConcern, setSelectedConcern] = useState('loss');
   const [customPrompt, setCustomPrompt] = useState('');
@@ -885,22 +886,23 @@ export default function ScenariosTab({ account }) {
         </div>
 
         <div className="real-world-implication">
-          <div className="concern-selector">
-            <span>Show this through my concern:</span>
-            <div className="concern-buttons" role="group" aria-label="Real-world concern">
-              {concernOptions.map(option => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={selectedConcern === option.id ? 'active' : ''}
-                  onClick={() => setSelectedConcern(option.id)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
+            {!scenario.aiGenerated && (
+              <div className="concern-selector">
+                <span>Show this through my concern:</span>
+                <div className="concern-buttons" role="group" aria-label="Real-world concern">
+                  {concernOptions.map(option => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={selectedConcern === option.id ? 'active' : ''}
+                      onClick={() => setSelectedConcern(option.id)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           <div className="implication-header">
             <span className="implication-icon">!</span>
             <div>

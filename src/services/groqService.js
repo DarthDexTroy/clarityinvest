@@ -99,33 +99,60 @@ function getDirectGameFallback({ question, answers, accountType, userQuestion })
   return `For this ${accountType} question, focus on "${correctAnswer}." ${question.lesson}`;
 }
 
-export async function getGameQuestionHelp({ question, answers, accountType, userQuestion }) {
+export async function getGameQuestionHelp({ question, answers, accountType, userQuestion, chatHistory = [] }) {
   const correctAnswer = answers[question.correct];
   const answerChoices = answers.map((answer, index) => `${index + 1}. ${answer}`).join('\n');
   const asksForAnswer = /answer|which one|correct|pick|choose/i.test(userQuestion);
-  const responseMode = asksForAnswer
-    ? 'The player is asking for the answer. Start with: The answer is "[correct answer]". Then explain why in 1-2 plain sentences.'
-    : 'The player is asking for help. Do not repeat generic finance definitions. Explain the exact clue in this question and how to eliminate one tempting wrong choice.';
+  const isSimpleGreeting = /^(hi|hello|hey|yo|sup|thanks|thank you)\b[!.?]*$/i.test(userQuestion.trim());
+  const isShortFollowUp = /^(what|so|why|how|huh|ok|okay)\b[!.?]*$/i.test(userQuestion.trim());
 
-  const prompt = `You are a concise investing tutor inside a beginner finance game.
+  // Keep greeting behavior deterministic so short messages don't trigger random long answers.
+  if (isSimpleGreeting) {
+    return 'Hi! Ask me about this question and I will help you narrow it down in plain English.';
+  }
 
-Account topic: ${accountType}
-Current quiz question: ${question.question}
-Answer choices:
-${answerChoices}
-Correct answer: ${correctAnswer}
-Lesson the game is teaching: ${question.lesson}
-Player asks: ${userQuestion}
+  const chatTurns = Array.isArray(chatHistory)
+    ? chatHistory
+      .slice(-8)
+      .filter((msg) => (msg?.role === 'user' || msg?.role === 'assistant') && typeof msg?.content === 'string')
+      .map((msg) => ({
+        role: msg.role,
+        content: msg.content
+      }))
+    : [];
 
-${responseMode}
-Keep the answer specific to this question. Use 2-3 short sentences.`;
+  const systemMessage = {
+    role: 'system',
+    content: [
+      'You are a concise investing tutor inside a beginner finance quiz.',
+      `Account topic: ${accountType}`,
+      `Current quiz question: ${question.question}`,
+      `Answer choices:\n${answerChoices}`,
+      `Correct answer: ${correctAnswer}`,
+      `Lesson: ${question.lesson}`,
+      asksForAnswer
+        ? 'Player wants the answer. Start with: The answer is "[correct answer]". Then explain why in 1-2 short plain sentences.'
+        : isShortFollowUp
+          ? 'Player asked a very short follow-up. Continue from prior context in 1-2 short sentences and avoid repeating the full prior explanation.'
+          : 'Give focused help for this exact question. Mention one clue and one tempting wrong option to eliminate.',
+      'Avoid generic finance definitions. Keep language simple and specific.'
+    ].join('\n')
+  };
+
+  const messages = [systemMessage, ...chatTurns];
+
+  // Ensure the current turn is present exactly once.
+  const last = messages[messages.length - 1];
+  if (!(last?.role === 'user' && last?.content === userQuestion)) {
+    messages.push({ role: 'user', content: userQuestion });
+  }
 
   try {
     const content = await fetchGroqCompletion({
-      messages: [{ role: 'user', content: prompt }],
+      messages,
       model: 'llama-3.3-70b-versatile',
-      temperature: 0.5,
-      max_tokens: 180
+      temperature: 0.35,
+      max_tokens: isShortFollowUp ? 90 : 180
     });
 
     return content || getDirectGameFallback({ question, answers, accountType, userQuestion });

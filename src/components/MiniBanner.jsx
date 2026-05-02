@@ -1,7 +1,11 @@
 import { motion } from 'framer-motion';
+import { useApp } from '../store/useAppStore';
 import './MiniBanner.css';
 
-export default function MiniBanner({ account }) {
+export default function MiniBanner({ account: accountProp }) {
+  const { state } = useApp();
+  const account = state.portfolioAccounts.find((item) => item.id === accountProp?.id) || accountProp;
+
   if (!account || !account.holdings) {
     return null;
   }

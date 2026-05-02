@@ -14,6 +14,50 @@ ClarityInvest is an AI-powered portfolio management platform designed for beginn
 - **🎮 Investment Game**: Learn investing fundamentals through a coffee shop business simulation
 - **✅ Review & Execute**: Transparent rebalancing with educational explanations
 
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ installed
+- A Groq API key (free tier available)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   cd clarityinvest
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Get your Groq API key**
+   - Visit [console.groq.com](https://console.groq.com/keys)
+   - Sign up for a free account
+   - Create a new API key
+
+4. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` and add your Groq API key:
+   ```
+   GROQ_API_KEY=your_actual_api_key_here
+   ```
+
+   For Vercel, add the same `GROQ_API_KEY` value in Project Settings → Environment Variables, then redeploy.
+
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open your browser**
+   Navigate to `http://localhost:5173`
+
 ## 🛠️ Tech Stack
 
 - **Frontend**: React 19 + Vite 8

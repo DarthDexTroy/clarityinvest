@@ -629,14 +629,40 @@
 
 .milestone-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 5px;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   margin-bottom: 0.5rem;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid #2a2a4e;
   font-size: 0.8125rem;
+}
+
+.milestone-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.milestone-bar-wrap {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.milestone-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #6c5ce7, #a78bfa);
+  transition: width 0.4s ease;
+}
+
+.milestone-day-label {
+  font-size: 0.7rem;
+  color: #64748b;
+  text-align: right;
 }
 
 .milestone-item span {
@@ -654,6 +680,14 @@
 
 .milestone-item.earned span,
 .milestone-item.earned strong {
+  color: #00d4aa;
+}
+
+.milestone-item.earned .milestone-bar-fill {
+  background: linear-gradient(90deg, #00d4aa, #34d399);
+}
+
+.milestone-item.earned .milestone-day-label {
   color: #00d4aa;
 }
 

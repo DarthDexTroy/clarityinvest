@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '../../store/useAppStore';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import './PortfolioTab.css';
@@ -132,7 +132,7 @@ const HOLDING_INFO = {
 };
 
 export default function PortfolioTab({ account: accountProp }) {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   // Always read the live account from the store so balances reflect the latest plan/contribution
   const account = state.portfolioAccounts.find(a => a.id === accountProp?.id) || accountProp;
   const [searchTerm, setSearchTerm] = useState('');
@@ -140,6 +140,25 @@ export default function PortfolioTab({ account: accountProp }) {
   const [filterType, setFilterType] = useState('All');
   const [expandedRow, setExpandedRow] = useState(null);
   const [expandedTypeRow, setExpandedTypeRow] = useState(null);
+  const [typePopoverPos, setTypePopoverPos] = useState({ top: 0, left: 0, right: 'auto' });
+
+  const handleHoldingChange = (holding, updates) => {
+    dispatch({
+      type: 'UPDATE_HOLDING',
+      payload: {
+        accountId: account.id,
+        ticker: holding.ticker,
+        updates
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (!expandedTypeRow) return;
+    const close = () => setExpandedTypeRow(null);
+    document.addEventListener('click', close, true);
+    return () => document.removeEventListener('click', close, true);
+  }, [expandedTypeRow]);
 
   // Show holdings for the selected investment account so totals match the account header.
   const allHoldings = useMemo(() => {
@@ -415,14 +434,40 @@ export default function PortfolioTab({ account: accountProp }) {
                                 <button
                                   type="button"
                                   className="type-info-button"
-                                  onClick={() => setExpandedTypeRow(isTypeExpanded ? null : rowKey)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isTypeExpanded) { setExpandedTypeRow(null); return; }
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const popoverH = 120; // estimated height
+                                    const popoverW = 280;
+                                    const spaceBelow = window.innerHeight - rect.bottom;
+                                    const spaceRight = window.innerWidth - rect.left;
+                                    const top = spaceBelow >= popoverH + 12
+                                      ? rect.bottom + 8
+                                      : rect.top - popoverH - 8;
+                                    const left = spaceRight >= popoverW
+                                      ? rect.left
+                                      : Math.max(8, rect.right - popoverW);
+                                    setTypePopoverPos({ top, left, right: 'auto' });
+                                    setExpandedTypeRow(rowKey);
+                                  }}
                                   aria-label={`Toggle ${holding.type} information`}
                                   aria-expanded={isTypeExpanded}
                                 >
                                   i
                                 </button>
                                 {isTypeExpanded && (
-                                  <div className="type-info-popover" role="note">
+                                  <div
+                                    className="type-info-popover"
+                                    role="note"
+                                    style={{
+                                      position: 'fixed',
+                                      top: typePopoverPos.top,
+                                      left: typePopoverPos.left,
+                                      right: typePopoverPos.right,
+                                      zIndex: 9999
+                                    }}
+                                  >
                                     <strong>{typeInfo.title}</strong>
                                     <span>{typeInfo.description}</span>
                                     <span>{typeInfo.detail}</span>
@@ -432,8 +477,30 @@ export default function PortfolioTab({ account: accountProp }) {
                             )}
                           </div>
                         </td>
-                        <td className="text-right">{holding.shares.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                        <td className="text-right">{formatCurrency(holding.price)}</td>
+                        <td className="text-right">
+                          <input
+                            className="holding-edit-input"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={Number(holding.shares.toFixed ? holding.shares.toFixed(2) : holding.shares)}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={(event) => handleHoldingChange(holding, { shares: event.target.value === '' ? 0 : Number(event.target.value) })}
+                            aria-label={`Edit shares for ${holding.ticker}`}
+                          />
+                        </td>
+                        <td className="text-right">
+                          <input
+                            className="holding-edit-input price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={Number(holding.price.toFixed ? holding.price.toFixed(2) : holding.price)}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={(event) => handleHoldingChange(holding, { price: event.target.value === '' ? 0 : Number(event.target.value) })}
+                            aria-label={`Edit price for ${holding.ticker}`}
+                          />
+                        </td>
                         <td className="text-right value-cell">{formatCurrency(holding.totalValue)}</td>
                         <td className={`text-right ${isPositiveGain ? 'positive' : 'negative'}`}>
                           {formatPercent(holding.gainLoss)}

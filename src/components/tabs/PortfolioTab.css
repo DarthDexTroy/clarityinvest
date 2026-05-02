@@ -303,10 +303,6 @@
 }
 
 .type-info-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 20;
   width: min(280px, 70vw);
   padding: 12px;
   border: 1px solid rgba(167, 139, 250, 0.45);
@@ -318,19 +314,6 @@
   gap: 6px;
   text-align: left;
   white-space: normal;
-}
-
-.type-info-popover::before {
-  content: '';
-  position: absolute;
-  top: -6px;
-  right: 10px;
-  width: 10px;
-  height: 10px;
-  border-left: 1px solid rgba(167, 139, 250, 0.45);
-  border-top: 1px solid rgba(167, 139, 250, 0.45);
-  background: rgba(12, 12, 24, 0.98);
-  transform: rotate(45deg);
 }
 
 .type-info-popover strong {
@@ -351,6 +334,21 @@
 
 .value-cell {
   font-weight: 600;
+}
+
+.holding-edit-input {
+  width: 76px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(108, 92, 231, 0.25);
+  background: rgba(15, 15, 30, 0.72);
+  color: #e2e8f0;
+  font-size: var(--text-label);
+  text-align: right;
+}
+
+.holding-edit-input.price {
+  width: 68px;
 }
 
 .no-results {

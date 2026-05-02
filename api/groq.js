@@ -1,20 +1,28 @@
 import Groq from 'groq-sdk';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-});
-
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Allow', 'POST, OPTIONS');
+    return res.status(204).end();
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!process.env.GROQ_API_KEY) {
-    return res.status(500).json({ error: 'Missing GROQ_API_KEY environment variable' });
+  const apiKey = process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({
+      error: 'Missing Groq API key. Add GROQ_API_KEY in Vercel Project Settings > Environment Variables.'
+    });
   }
 
   try {
+    const groq = new Groq({ apiKey });
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const {
       messages,
@@ -41,7 +49,8 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('Groq API proxy error:', error);
-    return res.status(500).json({
+    const status = Number(error?.status || error?.statusCode) || 500;
+    return res.status(status >= 400 && status < 600 ? status : 500).json({
       error: error?.message || 'Groq API request failed'
     });
   }

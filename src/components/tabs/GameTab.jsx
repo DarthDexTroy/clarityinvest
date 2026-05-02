@@ -384,10 +384,11 @@ export default function GameTab() {
     
     // Check for milestones
     let milestoneBonus = 0;
+    let newEarnedMilestones = game.earnedMilestones;
     for (const m of milestones) {
-      if (newDay === m.day && !game.earnedMilestones.has(m.day)) {
+      if (newDay === m.day && !game.earnedMilestones.includes(m.day)) {
         milestoneBonus = m.bonus;
-        game.earnedMilestones.add(m.day);
+        newEarnedMilestones = [...game.earnedMilestones, m.day];
         toast.success(`🎉 ${m.name} Milestone! +$${m.bonus}`);
         break;
       }
@@ -413,7 +414,8 @@ export default function GameTab() {
         currentQuestion: (game.currentQuestion + 1) % selectedQuestions.length,
         lastChange: totalGain + milestoneBonus,
         lastProfit: game.profit,
-        profitHistory
+        profitHistory,
+        earnedMilestones: newEarnedMilestones
       }
     });
 
@@ -473,6 +475,7 @@ export default function GameTab() {
     const message = chatInput.trim();
     if (!message || chatLoading) return;
     const asksForAnswer = /answer|which one|correct|pick|choose/i.test(message);
+    const historyForCoach = [...chatMessages, { role: 'user', content: message }].slice(-8);
 
     setChatInput('');
     setChatMessages(prev => [...prev, { role: 'user', content: message }]);
@@ -497,7 +500,8 @@ export default function GameTab() {
       question: currentQ,
       answers: currentQ.answers,
       accountType: selectedAccountType,
-      userQuestion: message
+      userQuestion: message,
+      chatHistory: historyForCoach
     });
 
     setChatMessages(prev => [...prev, { role: 'assistant', content: answer }]);
@@ -788,15 +792,31 @@ export default function GameTab() {
           
           <div className="milestones-compact">
             <h4>Milestones</h4>
-            {milestones.map(m => (
-              <div 
-                key={m.day} 
-                className={`milestone-item ${game.earnedMilestones.has(m.day) ? 'earned' : game.day >= m.day ? 'missed' : ''}`}
-              >
-                <span>{m.name}</span>
-                <strong>+${m.bonus}</strong>
-              </div>
-            ))}
+            {milestones.map(m => {
+              const earned = game.earnedMilestones.includes(m.day);
+              const missed = !earned && game.day > m.day;
+              const pct = earned ? 100 : Math.min(99, Math.round((game.day / m.day) * 100));
+              return (
+                <div
+                  key={m.day}
+                  className={`milestone-item ${earned ? 'earned' : missed ? 'missed' : ''}`}
+                >
+                  <div className="milestone-info">
+                    <span>{m.name}</span>
+                    <strong>+${m.bonus.toLocaleString()}</strong>
+                  </div>
+                  <div className="milestone-bar-wrap">
+                    <div
+                      className="milestone-bar-fill"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="milestone-day-label">
+                    {earned ? '✓ Earned' : `Day ${game.day}/${m.day}`}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -3,19 +3,52 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import './RebalanceModal.css';
 
+const getHoldingAssetClass = (holding) => {
+  const type = (holding.type || '').toLowerCase();
+  const ticker = (holding.ticker || '').toUpperCase();
+  if (type.includes('cash') || type.includes('money') || ticker.includes('CASH') || ticker.includes('SPAXX') || ticker.includes('FSGGX')) return 'cash';
+  if (type.includes('bond') || ticker.includes('BND') || ticker.includes('VBTLX')) return 'bonds';
+  return 'stocks';
+};
+
+const getPlanSnapshot = (state) => {
+  const planAccount = state.portfolioAccounts.find((account) => account.id === state.pendingPlan?.accountId);
+  const holdings = planAccount?.holdings || [];
+  if (!planAccount || holdings.length === 0) {
+    const total = state.holdings.stocks + state.holdings.bonds + state.holdings.cash;
+    return { values: state.holdings, allocation: state.allocation, total };
+  }
+
+  const values = holdings.reduce((totals, holding) => {
+    totals[getHoldingAssetClass(holding)] += holding.totalValue || 0;
+    return totals;
+  }, { stocks: 0, bonds: 0, cash: 0 });
+  const total = values.stocks + values.bonds + values.cash;
+  const allocation = total > 0
+    ? {
+        stocks: Math.round((values.stocks / total) * 100),
+        bonds: Math.round((values.bonds / total) * 100),
+        cash: 0
+      }
+    : { stocks: 0, bonds: 0, cash: 0 };
+  allocation.cash = Math.max(0, 100 - allocation.stocks - allocation.bonds);
+  return { values, allocation, total };
+};
+
 export default function RebalanceModal({ onClose, source, aiRecommendation, loadingAI, onConfirm }) {
   const { state } = useApp();
   
   if (!state.pendingPlan) return null;
   
-  const total = state.holdings.stocks + state.holdings.bonds + state.holdings.cash;
+  const snapshot = getPlanSnapshot(state);
+  const total = snapshot.total;
   const newStocks = Math.round((state.pendingPlan.stocks / 100) * total);
   const newBonds = Math.round((state.pendingPlan.bonds / 100) * total);
   const newCash = total - newStocks - newBonds;
   
-  const stockDiff = newStocks - state.holdings.stocks;
-  const bondDiff = newBonds - state.holdings.bonds;
-  const cashDiff = newCash - state.holdings.cash;
+  const stockDiff = newStocks - snapshot.values.stocks;
+  const bondDiff = newBonds - snapshot.values.bonds;
+  const cashDiff = newCash - snapshot.values.cash;
   
   const handleConfirm = () => {
     const titles = {
@@ -109,7 +142,7 @@ export default function RebalanceModal({ onClose, source, aiRecommendation, load
                 </span>
                 <span className="asset">Stocks</span>
                 <strong>${Math.abs(stockDiff).toLocaleString()}</strong>
-                <span className="percent">({Math.abs(state.pendingPlan.stocks - state.allocation.stocks)}%)</span>
+                <span className="percent">({Math.abs(state.pendingPlan.stocks - snapshot.allocation.stocks)}%)</span>
               </div>
             )}
             
@@ -120,7 +153,7 @@ export default function RebalanceModal({ onClose, source, aiRecommendation, load
                 </span>
                 <span className="asset">Bonds</span>
                 <strong>${Math.abs(bondDiff).toLocaleString()}</strong>
-                <span className="percent">({Math.abs(state.pendingPlan.bonds - state.allocation.bonds)}%)</span>
+                <span className="percent">({Math.abs(state.pendingPlan.bonds - snapshot.allocation.bonds)}%)</span>
               </div>
             )}
             
@@ -131,7 +164,7 @@ export default function RebalanceModal({ onClose, source, aiRecommendation, load
                 </span>
                 <span className="asset">Cash</span>
                 <strong>${Math.abs(cashDiff).toLocaleString()}</strong>
-                <span className="percent">({Math.abs(state.pendingPlan.cash - state.allocation.cash)}%)</span>
+                <span className="percent">({Math.abs(state.pendingPlan.cash - snapshot.allocation.cash)}%)</span>
               </div>
             )}
           </div>

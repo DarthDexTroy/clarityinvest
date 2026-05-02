@@ -111,6 +111,15 @@ const rebalanceAccountToPlan = (account, plan) => {
   };
 };
 
+const createSyncedState = (state) => {
+  const portfolioAccounts = state.portfolioAccounts.map(normalizeAccount);
+  return syncDerived({
+    ...state,
+    portfolioAccounts,
+    holdings: aggregateAccounts(portfolioAccounts)
+  });
+};
+
 function syncDerived(state) {
   const total = state.holdings.stocks + state.holdings.bonds + state.holdings.cash;
   if (total === 0) {
@@ -137,14 +146,10 @@ function syncDerived(state) {
 function reducer(state, action) {
   switch (action.type) {
     case 'SYNC_PORTFOLIO_ACCOUNTS':
-      {
-        const portfolioAccounts = state.portfolioAccounts.map(normalizeAccount);
-        return syncDerived({ ...state, portfolioAccounts, holdings: aggregateAccounts(portfolioAccounts) });
-      }
+      return createSyncedState(state);
 
     case 'SET_HOLDINGS': {
-      const newState = { ...state, holdings: action.payload };
-      return syncDerived(newState);
+      return syncDerived({ ...state, holdings: action.payload });
     }
     
     case 'SET_TARGET': {
@@ -243,6 +248,35 @@ function reducer(state, action) {
     
     case 'SET_SHOW_BEFORE_AFTER':
       return { ...state, showBeforeAfter: action.payload };
+
+    case 'UPDATE_HOLDING': {
+      const { accountId, ticker, updates } = action.payload;
+      const portfolioAccounts = state.portfolioAccounts.map((account) => {
+        if (account.id !== accountId) return account;
+
+        const updatedHoldings = account.holdings.map((holding) => {
+          if (holding.ticker !== ticker) return holding;
+          const next = { ...holding, ...updates };
+          const nextShares = Number.isFinite(Number(next.shares)) ? Number(next.shares) : holding.shares;
+          const nextPrice = Number.isFinite(Number(next.price)) ? Number(next.price) : holding.price;
+          const nextTotalValue = updates.totalValue !== undefined
+            ? Number(updates.totalValue)
+            : Math.round(nextShares * nextPrice);
+
+          return {
+            ...next,
+            shares: nextShares,
+            price: nextPrice,
+            totalValue: Number.isFinite(nextTotalValue) ? nextTotalValue : holding.totalValue,
+            costBasis: updates.costBasis !== undefined ? Number(updates.costBasis) : next.costBasis
+          };
+        });
+
+        return normalizeAccount({ ...account, holdings: updatedHoldings });
+      });
+
+      return syncDerived({ ...state, portfolioAccounts, holdings: aggregateAccounts(portfolioAccounts) });
+    }
     
     case 'ADD_CONTRIBUTION': {
       const { accountId, amount, assetClass } = action.payload;
@@ -250,11 +284,13 @@ function reducer(state, action) {
         if (account.id !== accountId) return account;
         
         // Add contribution to the appropriate holding
+        let contributionApplied = false;
         const updatedHoldings = account.holdings.map((holding) => {
           const holdingAssetClass = getHoldingAssetClass(holding);
           if (holdingAssetClass === assetClass || (assetClass === 'all' && holdingAssetClass !== 'cash')) {
             // Add to existing holding proportionally, or add to cash if specified
             const shareIncrease = holding.price > 0 ? amount / holding.price : 0;
+            contributionApplied = true;
             return {
               ...holding,
               shares: holding.shares + shareIncrease,
@@ -266,7 +302,7 @@ function reducer(state, action) {
         });
         
         // If contributing to cash or no matching holding found, add to cash holding
-        if (assetClass === 'cash') {
+        if (assetClass === 'cash' && !contributionApplied) {
           const cashHolding = updatedHoldings.find(h => getHoldingAssetClass(h) === 'cash');
           if (cashHolding) {
             const index = updatedHoldings.indexOf(cashHolding);
@@ -307,7 +343,7 @@ function reducer(state, action) {
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, syncDerived(initialState));
+  const [state, dispatch] = useReducer(reducer, initialState, createSyncedState);
   
   return (
     <AppContext.Provider value={{ state, dispatch }}>

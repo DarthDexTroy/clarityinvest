@@ -66,7 +66,7 @@ export const initialState = {
     currentQuestion: 0,
     lastProfit: 1000,
     lastChange: 0,
-    earnedMilestones: new Set(),
+    earnedMilestones: [],
     profitHistory: [1000]
   },
   

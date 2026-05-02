@@ -478,8 +478,9 @@ const getRiskEventStrategy = (event, target) => {
   };
 };
 
-export default function MapTab({ account, onNavigateToReview }) {
+export default function MapTab({ account: accountProp, onNavigateToReview }) {
   const { state, dispatch } = useApp();
+  const account = state.portfolioAccounts.find((item) => item.id === accountProp?.id) || accountProp;
   const [showModal, setShowModal] = useState(false);
   const [aiRecommendation, setAiRecommendation] = useState('');
   const [loadingAI, setLoadingAI] = useState(false);
@@ -493,9 +494,9 @@ export default function MapTab({ account, onNavigateToReview }) {
     const loadRecommendation = async () => {
       setLoadingAI(true);
       try {
-        const recommendation = await getEventRecommendation({
-          event,
-          allocation: state.allocation,
+          const recommendation = await getEventRecommendation({
+            event,
+          allocation: account?.allocation || state.allocation,
           affectedPositions: event.affected
         });
 
@@ -518,7 +519,7 @@ export default function MapTab({ account, onNavigateToReview }) {
     return () => {
       cancelled = true;
     };
-  }, [event, state.allocation]);
+  }, [event, account?.allocation, state.allocation]);
   
   const handleEventClick = async (id) => {
     dispatch({ type: 'SET_SELECTED_EVENT', payload: id });
@@ -529,6 +530,14 @@ export default function MapTab({ account, onNavigateToReview }) {
     const eventStrategy = getRiskEventStrategy(event, currentAllocation);
     const targetAllocation = eventStrategy.targetAllocation;
     const taxImpact = estimateTaxImpact(account, targetAllocation);
+    const accountTotal = account?.totalBalance || 0;
+    const liveTickerActions = eventStrategy.tickerActions.map((action, index) => ({
+      ...action,
+      estimatedValue: Math.max(
+        action.action === 'CONSIDER' ? 0 : 250,
+        Math.round(accountTotal * ([0.025, 0.018, 0.012][index] || 0.01))
+      )
+    }));
     const defensivePlan = {
       ...targetAllocation,
       source: 'risk-map',
@@ -548,7 +557,7 @@ export default function MapTab({ account, onNavigateToReview }) {
       sourceRegion: event.region,
       sourceRisk: event.risk,
       estimatedPortfolioImpact: event.portfolioImpact,
-      tickerActions: eventStrategy.tickerActions
+      tickerActions: liveTickerActions
     };
     return defensivePlan;
   };
