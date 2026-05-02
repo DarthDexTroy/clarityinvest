@@ -1,0 +1,50 @@
+.mini-banner {
+  background: rgba(26, 26, 46, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #2a2a4e;
+  padding: var(--space-2) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.banner-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  line-height: 1.5;
+}
+
+.banner-item .label,
+.banner-item .alloc-label {
+  font-size: var(--text-label);
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.banner-item strong {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.banner-divider {
+  color: #475569;
+  font-weight: 300;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .mini-banner {
+    padding: 0.75rem 1rem;
+    gap: 1rem;
+    font-size: 0.875rem;
+  }
+}

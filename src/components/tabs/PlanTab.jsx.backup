@@ -1,0 +1,505 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import './PlanTab.css';
+
+// Account-specific question sets
+const ACCOUNT_QUESTIONS = {
+  'Brokerage': [
+    {
+      id: 'goals',
+      label: 'What are your primary investing goals?',
+      options: [
+        { value: 'growth', label: 'Long-term wealth building' },
+        { value: 'income', label: 'Generate passive income' },
+        { value: 'balance', label: 'Mix of growth and income' },
+        { value: 'specific', label: 'Saving for a specific purchase' }
+      ]
+    },
+    {
+      id: 'timeHorizon',
+      label: 'What is your time horizon for this money?',
+      options: [
+        { value: 'short', label: '0-3 years' },
+        { value: 'medium', label: '3-7 years' },
+        { value: 'long', label: '7-15 years' },
+        { value: 'veryLong', label: '15+ years' }
+      ]
+    },
+    {
+      id: 'riskComfort',
+      label: 'How comfortable are you with market volatility?',
+      options: [
+        { value: 'low', label: 'Very uncomfortable - I prefer stability' },
+        { value: 'moderate', label: 'Somewhat comfortable - I can handle fluctuations' },
+        { value: 'high', label: 'Very comfortable - I focus on long-term gains' }
+      ]
+    },
+    {
+      id: 'taxAdvantaged',
+      label: 'Are you maxing out tax-advantaged accounts (401k, IRA, HSA)?',
+      options: [
+        { value: 'yes', label: 'Yes, all maxed out' },
+        { value: 'partial', label: 'Some, but not all' },
+        { value: 'no', label: 'No, not yet' }
+      ]
+    }
+  ],
+  'Roth IRA': [
+    {
+      id: 'incomeBracket',
+      label: 'What is your current income bracket?',
+      options: [
+        { value: 'low', label: 'Under $50k - Lower tax bracket now' },
+        { value: 'moderate', label: '$50k-$100k - Moderate bracket' },
+        { value: 'high', label: '$100k-$200k - Higher bracket' },
+        { value: 'veryHigh', label: 'Over $200k - Top bracket' }
+      ]
+    },
+    {
+      id: 'retirementAge',
+      label: 'At what age do you plan to retire?',
+      options: [
+        { value: 'early', label: 'Before 60' },
+        { value: 'normal', label: '60-65' },
+        { value: 'late', label: '65-70' },
+        { value: 'veryLate', label: 'After 70' }
+      ]
+    },
+    {
+      id: 'maxContribution',
+      label: 'Are you contributing the maximum ($7,000/year, or $8,000 if 50+)?',
+      options: [
+        { value: 'yes', label: 'Yes, maxing it out' },
+        { value: 'partial', label: 'Contributing, but not the max' },
+        { value: 'no', label: 'Just starting out' }
+      ]
+    },
+    {
+      id: 'strategy',
+      label: 'What investment strategy appeals to you?',
+      options: [
+        { value: 'aggressive', label: 'Aggressive growth (90%+ stocks)' },
+        { value: 'balanced', label: 'Balanced mix (60/40 stocks/bonds)' },
+        { value: 'conservative', label: 'Conservative (bonds & dividend stocks)' }
+      ]
+    }
+  ],
+  'HSA': [
+    {
+      id: 'hdhp',
+      label: 'Do you have a qualifying High Deductible Health Plan (HDHP)?',
+      options: [
+        { value: 'yes', label: 'Yes, I am enrolled' },
+        { value: 'switching', label: 'Planning to switch during open enrollment' },
+        { value: 'no', label: 'No, not currently' }
+      ]
+    },
+    {
+      id: 'strategy',
+      label: 'How do you plan to use your HSA?',
+      options: [
+        { value: 'invest', label: 'Invest 100% for retirement' },
+        { value: 'mixed', label: 'Keep some cash, invest the rest' },
+        { value: 'cash', label: 'Keep all in cash for current expenses' }
+      ]
+    },
+    {
+      id: 'primaryUse',
+      label: 'What is your primary goal for this HSA?',
+      options: [
+        { value: 'retirement', label: 'Build tax-free retirement savings' },
+        { value: 'current', label: 'Cover current medical expenses' },
+        { value: 'both', label: 'Balance both current and future needs' }
+      ]
+    },
+    {
+      id: 'contributionTarget',
+      label: 'What is your annual contribution goal?',
+      options: [
+        { value: 'max', label: 'Max out ($4,150 single / $8,300 family)' },
+        { value: 'half', label: 'About half the maximum' },
+        { value: 'modest', label: 'Whatever I can afford' }
+      ]
+    }
+  ],
+  'Traditional 401(k)': [
+    {
+      id: 'employerMatch',
+      label: 'Does your employer offer a matching contribution?',
+      options: [
+        { value: 'yes50', label: 'Yes, 50% match up to 6%' },
+        { value: 'yes100', label: 'Yes, 100% match up to a certain %' },
+        { value: 'yesOther', label: 'Yes, other formula' },
+        { value: 'no', label: 'No employer match' }
+      ]
+    },
+    {
+      id: 'contributionPercent',
+      label: 'What percentage of your salary are you contributing?',
+      options: [
+        { value: 'low', label: '1-5% - Just getting started' },
+        { value: 'medium', label: '6-10% - Meeting employer match' },
+        { value: 'high', label: '11-15% - Aggressive saving' },
+        { value: 'max', label: 'Maxing out ($23,000 in 2024)' }
+      ]
+    },
+    {
+      id: 'retirementAge',
+      label: 'At what age do you plan to retire?',
+      options: [
+        { value: 'early', label: 'Before 60' },
+        { value: 'normal', label: '60-65' },
+        { value: 'late', label: '65-70' },
+        { value: 'veryLate', label: 'After 70' }
+      ]
+    },
+    {
+      id: 'rothOption',
+      label: 'Does your plan offer a Roth 401(k) option?',
+      options: [
+        { value: 'yesUsing', label: 'Yes, and I am using it' },
+        { value: 'yesNot', label: 'Yes, but I am using Traditional' },
+        { value: 'no', label: 'No Roth option available' },
+        { value: 'unsure', label: 'Not sure' }
+      ]
+    }
+  ],
+  '529 Plan': [
+    {
+      id: 'beneficiary',
+      label: 'Who is the beneficiary?',
+      options: [
+        { value: 'child', label: 'My child' },
+        { value: 'grandchild', label: 'My grandchild' },
+        { value: 'self', label: 'Myself (future education)' },
+        { value: 'other', label: 'Other family member' }
+      ]
+    },
+    {
+      id: 'yearsUntilCollege',
+      label: 'How many years until the beneficiary starts college?',
+      options: [
+        { value: 'soon', label: '0-3 years - Starting soon' },
+        { value: 'medium', label: '4-8 years - Elementary/Middle school' },
+        { value: 'long', label: '9-15 years - Just born or toddler' },
+        { value: 'veryLong', label: '15+ years - Planning ahead' }
+      ]
+    },
+    {
+      id: 'targetSavings',
+      label: 'What is your total savings goal for college?',
+      options: [
+        { value: 'partial', label: '$20k-$50k - Cover some costs' },
+        { value: 'half', label: '$50k-$100k - Cover about half' },
+        { value: 'full', label: '$100k-$200k - Cover most/all tuition' },
+        { value: 'premium', label: '$200k+ - Full coverage including living expenses' }
+      ]
+    },
+    {
+      id: 'schoolType',
+      label: 'What type of school are you targeting?',
+      options: [
+        { value: 'inState', label: 'In-state public university' },
+        { value: 'outOfState', label: 'Out-of-state public university' },
+        { value: 'private', label: 'Private university' },
+        { value: 'unsure', label: 'Not sure yet' }
+      ]
+    }
+  ]
+};
+
+export default function PlanTab({ account, onNext }) {
+  const [answers, setAnswers] = useState({});
+  const [planGenerated, setPlanGenerated] = useState(false);
+  const [planResult, setPlanResult] = useState(null);
+
+  if (!account) {
+    return (
+      <div className="plan-tab">
+        <div className="empty-state">
+          <h3>No Account Selected</h3>
+          <p>Please select an account to create a personalized plan.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const questions = ACCOUNT_QUESTIONS[account.type] || [];
+
+  if (questions.length === 0) {
+    return (
+      <div className="plan-tab">
+        <div className="empty-state">
+          <h3>Plan Setup Coming Soon</h3>
+          <p>Guided planning for {account.type} accounts will be available soon.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleAnswerChange = (questionId, value) => {
+    setAnswers(prev => ({ ...prev, [questionId]: value }));
+  };
+
+  const allQuestionsAnswered = questions.every(q => answers[q.id]);
+
+  const generatePlan = () => {
+    // Generate personalized recommendations based on answers
+    const result = generateRecommendations(account.type, answers);
+    setPlanResult(result);
+    setPlanGenerated(true);
+    toast.success('Your personalized plan is ready!');
+  };
+
+  return (
+    <div className="plan-tab">
+      <div className="plan-card">
+        <div className="section-heading">
+          <p className="eyebrow">Guided Setup</p>
+          <h2>{account.type} Plan</h2>
+          <p className="plan-subtitle">Answer a few questions to get personalized recommendations for your {account.type}.</p>
+        </div>
+
+        {!planGenerated && (
+          <div className="questions-section">
+            {questions.map((question, index) => (
+              <div key={question.id} className="form-field">
+                <label>
+                  <span className="question-number">{index + 1}.</span> {question.label}
+                </label>
+                <select 
+                  value={answers[question.id] || ''} 
+                  onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                >
+                  <option value="">Select an option...</option>
+                  {question.options.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+
+            <button 
+              className="primary-button" 
+              onClick={generatePlan}
+              disabled={!allQuestionsAnswered}
+            >
+              Generate My Plan
+            </button>
+          </div>
+        )}
+
+        <AnimatePresence>
+          {planGenerated && planResult && (
+            <motion.div
+              className="plan-result-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <div className="result-header">
+                <span className="checkmark">✅</span>
+                <h3>Your Personalized Plan</h3>
+              </div>
+
+              <div className="recommendations-section">
+                {planResult.recommendations.map((rec, index) => (
+                  <div key={index} className="recommendation-card">
+                    <div className="rec-icon">{rec.icon}</div>
+                    <div className="rec-content">
+                      <h4>{rec.title}</h4>
+                      <p>{rec.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="action-buttons">
+                <button className="secondary-button" onClick={() => setPlanGenerated(false)}>
+                  Revise Answers
+                </button>
+                {onNext && (
+                  <button className="primary-button" onClick={onNext}>
+                    View Portfolio →
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+// Helper function to generate recommendations based on account type and answers
+function generateRecommendations(accountType, answers) {
+  const recommendations = [];
+
+  switch (accountType) {
+    case 'Brokerage':
+      if (answers.taxAdvantaged !== 'yes') {
+        recommendations.push({
+          icon: '⚠️',
+          title: 'Prioritize Tax-Advantaged Accounts First',
+          description: 'Before investing heavily in your taxable brokerage account, consider maxing out your 401(k), IRA, and HSA. These accounts offer significant tax benefits that compound over time.'
+        });
+      }
+      if (answers.riskComfort === 'high' && answers.timeHorizon === 'veryLong') {
+        recommendations.push({
+          icon: '📈',
+          title: 'Aggressive Growth Strategy',
+          description: 'With your long time horizon and high risk tolerance, consider an 80-90% stock allocation with low-cost index funds like VTI or VTSAX for maximum growth potential.'
+        });
+      }
+      recommendations.push({
+        icon: '💎',
+        title: 'Tax-Efficient Investing',
+        description: 'Use tax-efficient index funds and ETFs. Hold investments for over 1 year to qualify for long-term capital gains rates (0-20% vs ordinary income rates up to 37%).'
+      });
+      break;
+
+    case 'Roth IRA':
+      if (answers.maxContribution !== 'yes') {
+        recommendations.push({
+          icon: '🎯',
+          title: 'Maximize Your Contributions',
+          description: 'Try to reach the $7,000 annual limit ($8,000 if 50+). Every dollar grows completely tax-free forever. Even an extra $100/month adds up significantly over decades.'
+        });
+      }
+      if (answers.incomeBracket === 'low' || answers.incomeBracket === 'moderate') {
+        recommendations.push({
+          icon: '✨',
+          title: 'Perfect Timing for Roth',
+          description: 'You're in a lower tax bracket now—ideal for Roth contributions. You pay taxes today at your current rate and never pay taxes again, even if you're in a higher bracket in retirement.'
+        });
+      }
+      recommendations.push({
+        icon: '🚀',
+        title: 'Aggressive Growth is OK',
+        description: 'Since Roth IRA gains are never taxed, this is the perfect account for high-growth investments. Consider 90-100% stocks if you have 10+ years until retirement.'
+        });
+      break;
+
+    case 'HSA':
+      if (answers.strategy === 'cash') {
+        recommendations.push({
+          icon: '💡',
+          title: 'Consider Investing for Long-Term',
+          description: 'If you can afford to pay medical expenses out-of-pocket, invest your HSA for retirement. It's the only triple-tax-advantaged account (pre-tax contributions, tax-free growth, tax-free withdrawals).'
+        });
+      }
+      if (answers.contributionTarget !== 'max') {
+        recommendations.push({
+          icon: '🎯',
+          title: 'Max Out Your HSA',
+          description: 'Try to contribute the full $4,150 (single) or $8,300 (family). The HSA is arguably the best retirement account available due to its triple-tax advantage.'
+        });
+      }
+      recommendations.push({
+        icon: '🧾',
+        title: 'Save All Medical Receipts',
+        description: 'Keep receipts for all medical expenses indefinitely. You can reimburse yourself years later, allowing your HSA to grow tax-free in the meantime.'
+      });
+      break;
+
+    case 'Traditional 401(k)':
+      if (answers.employerMatch !== 'no' && answers.contributionPercent === 'low') {
+        recommendations.push({
+          icon: '💰',
+          title: 'Capture the Full Employer Match',
+          description: 'Free money alert! Make sure you're contributing at least enough to get your full employer match. It's an instant 50-100% return on your contribution.'
+        });
+      }
+      if (answers.contributionPercent !== 'max') {
+        recommendations.push({
+          icon: '📊',
+          title: 'Increase Contributions Gradually',
+          description: 'Consider increasing your contribution by 1% each year until you reach 15% or the max ($23,000 in 2024). You'll barely notice the difference, but your future self will thank you.'
+        });
+      }
+      recommendations.push({
+        icon: '⚖️',
+        title: 'Review Your Investment Options',
+        description: 'Choose low-cost index funds (expense ratios under 0.20%). Avoid actively managed funds with high fees. A target-date fund is a solid hands-off option.'
+      });
+      break;
+
+    case '529 Plan':
+      if (answers.yearsUntilCollege === 'soon') {
+        recommendations.push({
+          icon: '🔒',
+          title: 'Shift to Conservative Allocation',
+          description: 'With college starting soon, move to a more conservative allocation (60-70% bonds, 30-40% stocks) to protect your savings from market volatility.'
+        });
+      } else {
+        recommendations.push({
+          icon: '📈',
+          title: 'Aggressive Growth for Now',
+          description: 'With many years until college, you can invest aggressively (80-90% stocks). Consider age-based portfolios that automatically become more conservative over time.'
+        });
+      }
+      recommendations.push({
+        icon: '🎓',
+        title: 'State Tax Deduction',
+        description: 'Check if your state offers a tax deduction for 529 contributions. Many states offer deductions of $2,000-$10,000 per year.'
+      });
+      break;
+
+    default:
+      recommendations.push({
+        icon: '📊',
+        title: 'Start with the Basics',
+        description: 'Focus on consistent contributions, diversified investments, and keeping fees low. These fundamentals matter more than trying to time the market.'
+      });
+  }
+
+  return { recommendations };
+}
+                <div className="comparison-col">
+                  <h4>Current</h4>
+                  <div className="alloc-item">
+                    <span>{state.allocation.stocks}% stocks</span>
+                  </div>
+                  <div className="alloc-item">
+                    <span>{state.allocation.bonds}% bonds</span>
+                  </div>
+                  <div className="alloc-item">
+                    <span>{state.allocation.cash}% cash</span>
+                  </div>
+                </div>
+                
+                <div className="arrow">→</div>
+                
+                <div className="comparison-col">
+                  <h4>Target</h4>
+                  <div className="alloc-item">
+                    <span>{state.target.stocks}% stocks</span>
+                  </div>
+                  <div className="alloc-item">
+                    <span>{state.target.bonds}% bonds</span>
+                  </div>
+                  <div className="alloc-item">
+                    <span>{state.target.cash}% cash</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="profile-result">
+                <strong>🎯 {state.riskProfile}</strong>
+                <p>Built for your goals and comfort level.</p>
+              </div>
+              
+              <button className="primary-button" onClick={onNext}>
+                See your portfolio →
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
